@@ -1,0 +1,15 @@
+export const stationName = {
+"Em" : "Emmaboda",
+"Kac" : "Kalmar",
+"Ck" : "Karlskrona",
+"Nyb" : "Nybro",
+"M" : "Malmö",
+"Vö" : "Växjö",
+"Hm" : "Hässleholm",
+"Hvp" : "Hovmantorp",
+"G" : "Göteborg",
+"Av" : "Alvesta",
+"Cst" : "Stockholm",
+"Sdy" : "Smedby",
+"Tre" : "Trekanten",
+};
