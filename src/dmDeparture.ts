@@ -34,53 +34,62 @@ function listen(): Action<SDSContext, SDSEvent> {
 
 export const departureMachine: MachineConfig<SDSContext, any, SDSEvent> = (
 {
-    //initial: 'main_function',
+    initial: 'main_function',
     id: "departureMachine",
     type: 'parallel',
     states: {
 	    transitions: {
+	        id: "function",
 	        on: { 
 		        CHECK: [
                     { target: "#main.overall", cond: (context) => context.from === undefined 
-                              && context.to === undefined && context.date === undefined },
+                              && context.to === undefined && context.date === undefined && context.time === undefined},
                     { target: "#main.from", cond: (context) => context.from === undefined },
 		        	{ target: "#main.to", cond: (context) => context.to === undefined },
 		        	{ target: "#main.time", cond: (context) => context.time === undefined },
                     { target: "#main.date", cond: (context) => context.date === undefined },
-		        	{ target: "#main.confirm", 
+		        	{ target: "#main.final", 
 			          cond: (context) => context.from !== undefined && context.to !== undefined 
-                            && context.time !== undefined && context.date !== undefined }
+                            && context.time !== undefined && context.date !== undefined
+                            && context.order !== undefined
+                    }
 	        	    ],
 	        },
 	        exit : [(context, event) => console.log(context), cancel("check")],
 	    },
-
+	    
         main_function: {
-            initial: "overall",
+            initial: "welcome",
             id: "main",
             on: {
                 RECOGNISED: [
-                   //{ target: '#departureMachine.stop', cond: (context) => context.recResult === 'stop' },
-	           //{ target: '#departureMachine.help', cond: (context) => context.recResult === 'help' },
-                   //{ target: '#departureMachine.startover', cond: (context) => context.recResult === 'start over' },
+                   { target: '.stop', cond: (context) => ['stopp', 'stop', 'sluta'].includes(context.recResult) },
+                   { target: '.startover', cond: (context) => ['start over', 'börja om', 'start from the beginning', 'start from beginning'].includes(context.recResult) },
 
 		   { actions: [
                        assign((context) => { return { from: "from" in (prs_grammar(context.recResult.replace('.',' . '), gram)) ? prs_grammar(context.recResult.replace('.',' . '), gram).from : context.from } }),
                        assign((context) => { return { to: "to" in (prs_grammar(context.recResult.replace('.',' . '), gram)) ? prs_grammar(context.recResult.replace('.',' . '), gram).to : context.to } }),
+                       assign((context) => { return { order: "order" in (prs_grammar(context.recResult.replace('.',' . '), gram)) ? prs_grammar(context.recResult.replace('.',' . '), gram).order : context.order } }),
                        assign((context) => { return { time: "time" in (prs_grammar(context.recResult.replace('.',' . '), gram)) ? prs_grammar(context.recResult.replace('.',' . '), gram).time : context.time } }),
                        assign((context) => { return { date: "date" in (prs_grammar(context.recResult.replace('.',' . '), gram)) ? prs_grammar(context.recResult.replace('.',' . '), gram).date : context.date } }),
 		       send("CHECK")]
                    }
 
                  ] 
-                //MAXSPEECH: "#departureMachine.maxspeech",
             },
             states:{
-      	        hist: {
-                    type: "history",
-                    history: "shallow",
-                    target: "#main",
+	            startover: {
+                    entry: send((_context: SDSContext) => ({ type: "SPEAK", value: "OK. Starting over" })),
+                    on: { ENDSPEECH: "#departureMachine" },
+                    exit: [assign((context) => { return { from: undefined, to: undefined, time: undefined, date: undefined, order: undefined, result: undefined, output_text: undefined, recResult: undefined } }), cancel("ENDSPEECH")]
                 },
+
+                stop: {
+                    entry: say("OK. Going back to the root menu."),
+                    on: { ENDSPEECH: '#root'},
+                    exit: assign((context) => { return { from: undefined, to: undefined, time: undefined, date: undefined, order: undefined, result: undefined, output_text: undefined, recResult: undefined } }),
+                },
+                
             	welcome: {
                         initial: "prompt",
                         
@@ -110,7 +119,7 @@ export const departureMachine: MachineConfig<SDSContext, any, SDSEvent> = (
             	        prompt: {
                                 entry: send((context) => ({
             	                type: "SPEAK",
-            	                value: `Give more details. For example, where does the train departure from?`
+            	                value: `from which station?`
             	            })),
             	            on: { ENDSPEECH: "ask"}
             	        },
@@ -125,7 +134,7 @@ export const departureMachine: MachineConfig<SDSContext, any, SDSEvent> = (
             	        prompt: {
             	            entry: send((context) => ({
             	                type: "SPEAK",
-            	                value: ` more details? For example, where is the destination? `
+            	                value: ` to which station? `
             	            })),
             	            on: { ENDSPEECH: "ask" }
             	        },
@@ -140,7 +149,7 @@ export const departureMachine: MachineConfig<SDSContext, any, SDSEvent> = (
             	        prompt: {
             	            entry: send((context) => ({
             	                type: "SPEAK",
-            	                value: `More details please. What time? `
+            	                value: `After which time? `
             	            })),
             	            on: { ENDSPEECH: "ask" }
             	        },
@@ -155,7 +164,7 @@ export const departureMachine: MachineConfig<SDSContext, any, SDSEvent> = (
             	        prompt: {
             	            entry: send((context) => ({
             	                type: "SPEAK",
-            	                value: `More details please. Which day? `
+            	                value: `Which day? `
             	            })),
             	            on: { ENDSPEECH: "ask" }
             	        },
@@ -172,7 +181,6 @@ export const departureMachine: MachineConfig<SDSContext, any, SDSEvent> = (
             	            cond: (context) => "yesnoanswer" in (prs_grammar(context.recResult, yesnogram) || {}),
             	            actions: 
                                     [assign((context) => { return { confirm: prs_grammar(context.recResult, yesnogram).yesnoanswer } }), 
-                                    //cancel('maxsp')
                                 ],
             	            target: ".choose"
             	        },
@@ -196,9 +204,10 @@ export const departureMachine: MachineConfig<SDSContext, any, SDSEvent> = (
                     	             {actions: [
                                           assign((context) => { return { from: undefined } }),
                                           assign((context) => { return { to: undefined } }),
+                                          assign((context) => { return { order: undefined } }),
                                           assign((context) => { return { time: undefined } }),
                                           assign((context) => { return { date: undefined } })],
-                                          target: '#main.welcome', cond: (context) => context.confirm === false }
+                                      target: '#main.welcome', cond: (context) => context.confirm === false }
                     	            ] 
                     	},
                     	nomatch: {
@@ -217,7 +226,7 @@ export const departureMachine: MachineConfig<SDSContext, any, SDSEvent> = (
 			            check: {
 			                invoke: {
                                 id: 'tvrequest',
-                                src: (context) => tvRequest(createText(context.from, context.to, context.time, context.date)),
+                                src: (context) => tvRequest(createText(context.from, context.to, context.time, context.date, context.order)),
                                 onDone: {
                                   actions: [ assign({ result: (context, event) => event.data.RESPONSE.RESULT[0] })], 
                                   target: 'success',
@@ -230,35 +239,120 @@ export const departureMachine: MachineConfig<SDSContext, any, SDSEvent> = (
                         },
                         success: {
                            always: [
-                               {target: "read_no_result",  cond: (context) => context.result.TrainAnnouncement.length == 0 },
-                               {target: "read_result", cond: (context) => context.result.TrainAnnouncement.length !=0 }
+                               {
+                                target: "#main.read_no_result",  
+                                cond: (context) => context.result.TrainAnnouncement.length == 0 
+                               },
+                               {
+                                actions: assign({ output_text: (context) => 
+                                         createReport(context.result.TrainAnnouncement[0]) }),
+                                target: "#main.read_result", 
+                                cond: (context) => context.result.TrainAnnouncement.length !=0 
+                               }
                            ], 
           
                         },
                         failure: {
-                          entry: say("failed to fetch the data. Try again."),
-                          on: { ENDSPEECH: "#main" }
+                          entry: say("failed to fetch data from the authority. Try again."),
+                          on: { ENDSPEECH: "#main" },
+                          exit: assign((context) => { return { from: undefined, to: undefined, time: undefined, date: undefined, order: undefined, result: undefined, output_text: undefined } }),
                         },
-       	                read_no_result: {
-                	        entry: [say("Sorry, No train has been found. Try again.")],
-                            on : { ENDSPEECH: "#main"} 
-                        },
-                        read_result: {
-                	        entry: send((context) => ({
-            	                type: "SPEAK", value: (createReport(context.result.TrainAnnouncement[0])) 
-            	                })),
-                            on : { ENDSPEECH: "#main"} 
-                        }, 
 		            }
-                    
             	},
+
+    	        read_no_result: {
+                    entry: [say("Sorry, No related info has been found. Try again.")],
+                    on : { ENDSPEECH: "#main"}, 
+                    exit: assign((context) => { return { from: undefined, to: undefined, time: undefined, date: undefined, order: undefined, result: undefined, output_text: undefined } }),
+                },
+
+                read_result: {
+                    initial: "prompt",
+                    on: {
+            	        RECOGNISED: [
+            	        {target: ".prompt", cond: (context) => ["en gång till", "igen", "again", "repeat", "listen again"].includes(context.recResult.toLowerCase()) },
+            	        {target: ".more_info", cond: (context) => ["mer info", "mer information", "more info"].includes(context.recResult.toLowerCase())},
+            	        {actions: assign((context) => { return { from: undefined, to: undefined, time: undefined, date: undefined, order: undefined, result: undefined, output_text: undefined } }), 
+            	         target: "#departureMachine", 
+            	         cond: (context) => ["gå tillbaka", "börja om", "go back", "start over" ].includes(context.recResult.toLowerCase())},
+            	        { target: ".nomatch"}
+            	        ]
+                    },
+                    states: {
+                        prompt: {
+                            entry: send((context) => ({
+                                type: "SPEAK", value: context.output_text 
+                                })),
+                            on : { ENDSPEECH: "do_next"}
+                        },
+                        do_next: {
+                            entry: send((context) => ({
+                                type: "SPEAK", value: `Listen again? or more infomation? or start over?` 
+                                })),
+                            on : { ENDSPEECH: "ask"}
+                        },
+                        ask: {
+                            entry: send("LISTEN")
+                        },
+                        nomatch: {
+            	            entry: say("Listen again, or, more info, or, start over."),
+            	            on: { ENDSPEECH: "ask" }
+            	        },
+            	        more_info: {
+                 	        initial: "prompt",
+               	            states: {
+                	            prompt: { 
+                        	        entry: send((context) => ({
+                                type: "SPEAK",
+                                value: "checking", 
+                                //value: `checking more info about train ${context.result.TrainAnnouncement[0].AdvertisedTrainIdent}` 
+                                })),
+                                    on : { ENDSPEECH: "check"} 
+			                    },
+			                    check: {
+			                        invoke: {
+                                        id: 'tvrequest',
+                                        src: (context) => tvRequest(more_info(context.result.TrainAnnouncement[0].AdvertisedTrainIdent, context.time, context.date)),
+                                        onDone: {
+                                          actions: [ assign({ result: (context, event) => event.data.RESPONSE.RESULT[0] })], 
+                                          target: 'success',
+                                        },
+                                        onError: {
+                                          target: 'failure',
+                                          actions: assign({ error: (context, event) => event.data })
+                                        }
+                                    }
+                                },
+                                success: {
+                                   always: [
+                                       {
+                                        target: "#main.read_no_result",  
+                                        cond: (context) => context.result.TrainAnnouncement.length == 0 
+                                       },
+                                       {
+                                        actions: assign({ output_text: (context) => 
+                                                 createMoreReport(context.result.TrainAnnouncement) }),
+                                        target: "#main.read_result", 
+                                        cond: (context) => context.result.TrainAnnouncement.length !=0 
+                                       }
+                                   ], 
+                  
+                                },
+                                failure: {
+                                  entry: say("failed to fetch data from the authority. Try again."),
+                                  on: { ENDSPEECH: "#main" }
+                                },
+		                    }            	        
+            	        },
+                    },     
+                },
 	        },
-        }
+        },
     },
 }
 )
 
-function createText(from, to, time, date) {
+function createText(from, to, time, date, order) {
     var currentdate = new Date()
     if (time === "NOW") {
         var time = ("0" + currentdate.getHours()).slice(-2)+":"+("0" + currentdate.getMinutes()).slice(-2)
@@ -272,11 +366,17 @@ function createText(from, to, time, date) {
     var DateTime = date + "T" + time;
     console.log(DateTime)
     var LteDateTime = date + "T" + "23:59:59"
-    console.log(LteDateTime)
+    // console.log(LteDateTime)
+    if (order == "desc") {
+        var asc_desc = "desc"; 
+    } else {
+        var asc_desc = "asc"; 
+      };
+    
 	var text = `
 	<REQUEST>
       <LOGIN authenticationkey="${openapiconsolekey}" />
-      <QUERY objecttype="TrainAnnouncement" schemaversion="1.3" orderby="AdvertisedTimeAtLocation" limit="1">
+      <QUERY objecttype="TrainAnnouncement" schemaversion="1.3" orderby="AdvertisedTimeAtLocation ${asc_desc}" limit="1">
             <FILTER>
                   <AND>
                         <EQ name="ActivityType" value="Avgang" />
@@ -298,6 +398,40 @@ function createText(from, to, time, date) {
 return text;
 }
 
+function more_info(trainNo, time, date) {
+    var currentdate = new Date()
+    if (time === "NOW") {
+        var time = ("0" + currentdate.getHours()).slice(-2)+":"+("0" + currentdate.getMinutes()).slice(-2)
+    };
+    if (date === "today") {
+        var date = currentdate.getFullYear()+"-"+("0"+(currentdate.getMonth()+1)).slice(-2)+"-"+("0"+currentdate.getDate()).slice(-2)
+    }
+    if (date === "tomorrow") {
+        var date = currentdate.getFullYear()+"-"+("0"+(currentdate.getMonth()+1)).slice(-2)+"-"+("0"+(currentdate.getDate()+1)).slice(-2)
+    }    
+    var DateTime = date + "T" + time;
+    console.log(DateTime)
+    var LteDateTime = date + "T" + "23:59:59"
+    console.log(LteDateTime)
+	var text = `
+<REQUEST>
+    <LOGIN authenticationkey="${openapiconsolekey}"/>
+    <QUERY objecttype="TrainAnnouncement" schemaversion="1.3" orderby="AdvertisedTimeAtLocation">
+        <FILTER>
+            <EQ name="AdvertisedTrainIdent" value="${trainNo}" />
+            <EQ name="Advertised" value="true"/>
+            <GTE name="AdvertisedTimeAtLocation" value="${DateTime}" />
+            <LTE name="AdvertisedTimeAtLocation" value="${LteDateTime}" />
+        </FILTER>
+        <INCLUDE>AdvertisedTrainIdent</INCLUDE>
+        <INCLUDE>LocationSignature</INCLUDE>
+        <INCLUDE>AdvertisedTimeAtLocation</INCLUDE>
+  </QUERY>
+</REQUEST>`
+    console.log(text)
+return text;
+}
+
 function createReport(input) {
     var adTime=input.AdvertisedTimeAtLocation
     var trainNo=input.AdvertisedTrainIdent.slice(0,-4)+" "+input.AdvertisedTrainIdent.slice(-4,-2)+" "+input.AdvertisedTrainIdent.slice(-2)
@@ -314,6 +448,31 @@ function createReport(input) {
     console.log(text)
     return text
 }
+
+function createMoreReport(input) {
+    //console.log(input);
+    var trainNo=input[0].AdvertisedTrainIdent.slice(0,-4)+" "+input[0].AdvertisedTrainIdent.slice(-4,-2)+" "+input[0].AdvertisedTrainIdent.slice(-2)
+    var begin=input[0].LocationSignature
+    var begintime=input[0].AdvertisedTimeAtLocation.slice(11,16)
+    var final=input[input.length - 1].LocationSignature
+    var finaltime=input[input.length - 1].AdvertisedTimeAtLocation.slice(11,16)
+    var stations=""    
+    for (const [key, value] of Object.entries(input)) {
+      //console.log(`${key}`);
+      if (key == 0){ continue }; 
+      if (key % 2 == 0){ continue };
+      if (key == input.length-1){ continue };
+      stations = stations + ", " + stationName[value.LocationSignature]
+    };
+    var text=`
+    The train ${trainNo}, will departure from ${stationName[begin]} at ${begintime}. calling at ${stations},
+    and finally arrive at ${stationName[final]} at ${finaltime}.
+    `
+    return text
+};
+
+
+//Trafikverket API
 const proxyurl = "";
 const rasaurl = 'https://api.trafikinfo.trafikverket.se/v2/data.json'
 const tvRequest = (text: string) =>

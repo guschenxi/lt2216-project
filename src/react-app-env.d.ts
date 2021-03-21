@@ -10,11 +10,11 @@ interface SDSContext {
     to: string;
     day: string;
     time: string;
-    which: string;
     confirm: boolen;
     text: string;
     intent: Object;
-    count: number,
+    count: number;
+    order: string,
 
 }
 

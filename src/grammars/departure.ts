@@ -1,9 +1,17 @@
 export const grammar = `
 <grammar root="final">
    <rule id="final">
-      <tag> out = new Object(); </tag>
+      <tag> out = new Object();  </tag>
       <one-of>
          <item>
+             <one-of>
+               <item><ruleref uri="#time"/> <tag> out.time = rules.time; </tag></item>
+               <item><ruleref uri="#date"/> <tag> out.date = rules.date; </tag></item>
+               <item><ruleref uri="#from"/> <tag> out.from = rules.from; </tag></item>
+               <item><ruleref uri="#to"/> <tag> out.to = rules.to; </tag></item>
+             </one-of>
+         </item>
+         <item><tag>out.order = "asc";</tag>
             <ruleref uri="#QuestionWord"/><ruleref uri="#verb"/>
             <item repeat = "0-1">första</item><ruleref uri="#trainWord"/>
             <item repeat="1-4">
@@ -15,9 +23,9 @@ export const grammar = `
                </one-of>
             </item>
          </item>
-         <item>
+         <item><tag>out.order = "asc";</tag>
             <ruleref uri="#QuestionWord"/><ruleref uri="#verb"/>
-            <item repeat = "1-1">nästa</item><ruleref uri="#trainWord"/>
+            <item>nästa</item><ruleref uri="#trainWord"/>
             <tag> out.time = 'NOW'; </tag><tag> out.date = 'today'; </tag>
             <item repeat="0-2"><one-of>
                <item><ruleref uri="#from"/> <tag> out.from = rules.from; </tag></item>
@@ -26,7 +34,8 @@ export const grammar = `
          </item>
          <item>
             <ruleref uri="#QuestionWord"/><ruleref uri="#verb"/>
-            <ruleref uri="#which"/><tag> out.which = rules.which; </tag><ruleref uri="#trainWord"/>
+            <ruleref uri="#which"/><tag> out.time = rules.which.time; out.order = rules.which.order</tag>
+            <ruleref uri="#trainWord"/>
             <item repeat="0-3"><one-of>
                <item><ruleref uri="#date"/> <tag> out.date = rules.date; </tag></item>
                <item><ruleref uri="#from"/> <tag> out.from = rules.from; </tag></item>
@@ -68,22 +77,23 @@ export const grammar = `
 
    <rule id="which">
       <one-of>
-         <item> första <tag> out = 'first'; </tag></item>
-         <item> sista <tag> out = 'last'; </tag></item>
-         <item> det första <tag> out = 'first'; </tag></item>
-         <item> det sista <tag> out = 'last'; </tag></item>
-         <item> den första <tag> out = 'first'; </tag></item>
-         <item> den sista <tag> out = 'last'; </tag></item>
-         <item> de första <tag> out = 'first'; </tag></item>
-         <item> de sista <tag> out = 'last'; </tag></item>
+         <item> första <tag> out.time = '00:00'; out.order = "asc"; </tag></item>
+         <item> sista <tag> out.time = '00:00'; out.order = "desc"; </tag></item>
+         <item> det första <tag> out.time = '00:00'; out.order = "asc"; </tag></item>
+         <item> det sista <tag> out.time = '00:00'; out.order = "desc"; </tag></item>
+         <item> den första <tag> out.time = '00:00'; out.order = "asc"; </tag></item>
+         <item> den sista <tag> out.time = '00:00'; out.order = "desc"; </tag></item>
+         <item> de första <tag> out.time = '00:00'; out.order = "asc"; </tag></item>
+         <item> de sista <tag> out.time = '00:00'; out.order = "desc"; </tag></item>
       </one-of>
    </rule>
 
    <rule id="from">
-      från <ruleref uri="#station"/> <tag> out = rules.station; </tag>
+      <item>från</item><ruleref uri="#station"/> <tag> out = rules.station; </tag>
    </rule>
    <rule id="to">
-      till <ruleref uri="#station"/> <tag> out = rules.station; </tag>
+      <one-of><item>till</item><item>mot</item></one-of>
+      <ruleref uri="#station"/> <tag> out = rules.station; </tag>
    </rule>
 
    <rule id="station">
@@ -102,6 +112,7 @@ export const grammar = `
          <item> Växjö <tag> out = 'Vö'; </tag></item>
          <item> Hässleholm <tag> out = 'Hm'; </tag></item>
          <item> Hovmantorp <tag> out = 'Hvp'; </tag></item>
+         <item> Lessebo <tag> out = 'Lo'; </tag></item>
          <item> Göteborg <tag> out = 'G'; </tag></item>
          <item> Alvesta <tag> out = 'Av'; </tag></item>
          <item> Stockholm <tag> out = 'Cst'; </tag></item>
@@ -110,7 +121,7 @@ export const grammar = `
           <one-of>
              <item>station</item> <item>Station</item>
              <item>centralstation</item> <item>Centralstation</item>
-             <item>C</item> <item>c</item>
+             <item>C</item> <item>c</item> <item>central</item>
              <item>stationen</item> <item>Stationen</item>
              <item>centralstationen</item> <item>Centralstationen</item>
           </one-of>
@@ -118,10 +129,10 @@ export const grammar = `
    </rule>
 
    <rule id="time">
-      <tag> out = "NOW"; </tag>
-	   <item repeat="0-1">
-	      <item repeat="0-1"> efter </item> <item repeat="0-1"> klockan </item>
-	      <one-of>
+	   <item repeat="0-1"> efter </item> <item repeat="0-1"> klockan </item>
+	   <one-of>
+	     <item> nu <tag> out = "NOW"; </tag></item>
+	     <item> now <tag> out = "NOW"; </tag></item>
 		 <item><ruleref uri="#hour"/><tag>out = rules.hour+":00"</tag></item>
 		 <item><ruleref uri="#hour"/>.<ruleref uri="#minute"/><tag>out = rules.hour+":"+rules.minute;</tag></item>
 		 <item><ruleref uri="#hour"/>och<ruleref uri="#minute"/><tag>out.hour = rules.hour; out.minute = rules.minute;</tag></item>
@@ -130,22 +141,22 @@ export const grammar = `
 		 <item> halv <ruleref uri="#hour"/><tag>out = (rules.hour-1) +":30"; </tag></item>
 		 <item> kvart i <ruleref uri="#hour"/><tag>out = (rules.hour-1) +":45"; </tag></item>
 		 <item> kvart över <ruleref uri="#hour"/><tag>out = rules.hour +":15"; </tag></item>
-	      </one-of>
-	   </item>
+	  </one-of>
    </rule>
+   
    <rule id="minute">
       <one-of>
-         <item><one-of><item>00</item><item>0</item></one-of> <tag> out = '00'; </tag></item>
-         <item><one-of><item>01</item><item>1</item></one-of> <tag> out = '01'; </tag></item>
-         <item><one-of><item>02</item><item>2</item></one-of> <tag> out = '02'; </tag></item>
-         <item><one-of><item>03</item><item>3</item></one-of> <tag> out = '03'; </tag></item>
-         <item><one-of><item>04</item><item>4</item></one-of> <tag> out = '04'; </tag></item>
-         <item><one-of><item>05</item><item>5</item></one-of> <tag> out = '05'; </tag></item>
-         <item><one-of><item>06</item><item>6</item></one-of> <tag> out = '06'; </tag></item>
-         <item><one-of><item>07</item><item>7</item></one-of> <tag> out = '07'; </tag></item>
-         <item><one-of><item>08</item><item>8</item></one-of> <tag> out = '08'; </tag></item>
-         <item><one-of><item>09</item><item>9</item></one-of> <tag> out = '09'; </tag></item>
-         <item>10 <tag> out = '10'; </tag></item>
+         <item><one-of><item>00</item><item>0</item><item>noll</item></one-of> <tag> out = '00'; </tag></item>
+         <item><one-of><item>01</item><item>1</item><item>ett</item></one-of> <tag> out = '01'; </tag></item>
+         <item><one-of><item>02</item><item>2</item><item>två</item></one-of> <tag> out = '02'; </tag></item>
+         <item><one-of><item>03</item><item>3</item><item>tre</item></one-of> <tag> out = '03'; </tag></item>
+         <item><one-of><item>04</item><item>4</item><item>fyra</item></one-of> <tag> out = '04'; </tag></item>
+         <item><one-of><item>05</item><item>5</item><item>fem</item></one-of> <tag> out = '05'; </tag></item>
+         <item><one-of><item>06</item><item>6</item><item>sex</item></one-of> <tag> out = '06'; </tag></item>
+         <item><one-of><item>07</item><item>7</item><item>sju</item></one-of> <tag> out = '07'; </tag></item>
+         <item><one-of><item>08</item><item>8</item><item>åtta</item></one-of> <tag> out = '08'; </tag></item>
+         <item><one-of><item>09</item><item>9</item><item>nio</item></one-of> <tag> out = '09'; </tag></item>
+         <item><one-of><item>10</item><item>tio</item></one-of><tag> out = '10'; </tag></item>
          <item>11 <tag> out = '11'; </tag></item>
          <item>12 <tag> out = '12'; </tag></item>
          <item>13 <tag> out = '13'; </tag></item>
@@ -200,17 +211,17 @@ export const grammar = `
    </rule>
    <rule id="hour">
       <one-of>
-         <item><one-of><item>00</item><item>0</item></one-of> <tag> out = '01'; </tag></item>
-         <item><one-of><item>01</item><item>1</item></one-of> <tag> out = '01'; </tag></item>
-         <item><one-of><item>02</item><item>2</item></one-of> <tag> out = '02'; </tag></item>
-         <item><one-of><item>03</item><item>3</item></one-of> <tag> out = '03'; </tag></item>
-         <item><one-of><item>04</item><item>4</item></one-of> <tag> out = '04'; </tag></item>
-         <item><one-of><item>05</item><item>5</item></one-of> <tag> out = '05'; </tag></item>
-         <item><one-of><item>06</item><item>6</item></one-of> <tag> out = '06'; </tag></item>
-         <item><one-of><item>07</item><item>7</item></one-of> <tag> out = '07'; </tag></item>
-         <item><one-of><item>08</item><item>8</item></one-of> <tag> out = '08'; </tag></item>
-         <item><one-of><item>09</item><item>9</item></one-of> <tag> out = '09'; </tag></item>
-         <item>10 <tag> out = '10'; </tag></item>
+         <item><one-of><item>00</item><item>0</item><item>noll</item></one-of> <tag> out = '01'; </tag></item>
+         <item><one-of><item>01</item><item>1</item><item>ett</item></one-of> <tag> out = '01'; </tag></item>
+         <item><one-of><item>02</item><item>2</item><item>två</item></one-of> <tag> out = '02'; </tag></item>
+         <item><one-of><item>03</item><item>3</item><item>tre</item></one-of> <tag> out = '03'; </tag></item>
+         <item><one-of><item>04</item><item>4</item><item>fyra</item></one-of> <tag> out = '04'; </tag></item>
+         <item><one-of><item>05</item><item>5</item><item>fem</item></one-of> <tag> out = '05'; </tag></item>
+         <item><one-of><item>06</item><item>6</item><item>sex</item></one-of> <tag> out = '06'; </tag></item>
+         <item><one-of><item>07</item><item>7</item><item>sju</item></one-of> <tag> out = '07'; </tag></item>
+         <item><one-of><item>08</item><item>8</item><item>åtta</item></one-of> <tag> out = '08'; </tag></item>
+         <item><one-of><item>09</item><item>9</item><item>nio</item></one-of> <tag> out = '09'; </tag></item>
+         <item><one-of><item>10</item><item>tio</item></one-of><tag> out = '10'; </tag></item>
          <item>11 <tag> out = '11'; </tag></item>
          <item>12 <tag> out = '12'; </tag></item>
          <item>13 <tag> out = '13'; </tag></item>
@@ -229,17 +240,16 @@ export const grammar = `
    </rule>
 
    <rule id="date">
-      <tag> out = 'today'; </tag>
-      <item repeat = "0-1">
          <one-of>
             <item> idag <tag> out = 'today'; </tag></item>
             <item> imorgon <tag> out = 'tomorrow'; </tag></item>
+            <item> today <tag> out = 'today'; </tag></item>
+            <item> tomorrow <tag> out = 'tomorrow'; </tag></item>
             <item> 
                <item repeat="0-1"> den </item><ruleref uri="#day"/><ruleref uri="#month"/>
                <tag> out = '2021-'+ rules.month + '-' + rules.day ; </tag>
             </item>
          </one-of>
-      </item>
    </rule>
 
    <rule id="day">
@@ -280,18 +290,18 @@ export const grammar = `
 
    <rule id="month">
       <one-of>
-         <item> Januari <tag> out = '01'; </tag></item>
-         <item> Februari <tag> out = '02'; </tag></item>
-         <item> Mars <tag> out = '03'; </tag></item>
-         <item> April <tag> out = '04'; </tag></item>
-         <item> Maj <tag> out = '05'; </tag></item>
-         <item> Juni <tag> out = '06'; </tag></item>
-         <item> Juli <tag> out = '07'; </tag></item>
-         <item> Augusti <tag> out = '08'; </tag></item>
-         <item> September <tag> out = '09'; </tag></item>
-         <item> Oktober <tag> out = '10'; </tag></item>
-         <item> November <tag> out = '11'; </tag></item>
-         <item> December <tag> out = '12'; </tag></item>
+         <item><one-of><item>Januari</item><item>januari</item></one-of><tag> out = '01'; </tag></item>
+         <item><one-of><item>Februari</item><item>februari</item></one-of><tag> out = '02'; </tag></item>
+         <item><one-of><item>Mars</item><item>mars</item></one-of><tag> out = '03'; </tag></item>
+         <item><one-of><item>April</item><item>april</item></one-of><tag> out = '04'; </tag></item>
+         <item><one-of><item>Maj</item><item>maj</item></one-of><tag> out = '05'; </tag></item>
+         <item><one-of><item>Juni</item><item>juni</item></one-of><tag> out = '06'; </tag></item>
+         <item><one-of><item>Juli</item><item>juli</item></one-of><tag> out = '07'; </tag></item>
+         <item><one-of><item>Augusti</item><item>augusti</item></one-of><tag> out = '08'; </tag></item>
+         <item><one-of><item>September</item><item>september</item></one-of><tag> out = '09'; </tag></item>
+         <item><one-of><item>Oktober</item><item>oktober</item></one-of><tag> out = '10'; </tag></item>
+         <item><one-of><item>November</item><item>november</item></one-of><tag> out = '11'; </tag></item>
+         <item><one-of><item>December</item><item>december</item></one-of><tag> out = '12'; </tag></item>
       </one-of>
    </rule>
 </grammar>

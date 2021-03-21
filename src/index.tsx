@@ -36,7 +36,7 @@ const machine = Machine<SDSContext, any, SDSEvent>({
           states:{
 
 
-check: {
+/*check: {
 			                invoke: {
                                 id: 'tvrequest',
                                 src: (context, event) => tvRequest,
@@ -50,7 +50,7 @@ check: {
                                 }
                             }
                         },
-
+*/
                         
                         
               init: {on: {CLICK: 'dmDeparture'}
@@ -88,7 +88,7 @@ check: {
                             actions: assign((context) => { return { count: 0 } }),
                             target:'idle'
                         },
-                        MAXSPEECH: 'idle',
+                        //MAXSPEECH: 'idle',
                     },
                     states: {
                         match: {

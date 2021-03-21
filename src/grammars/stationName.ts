@@ -12,4 +12,10 @@ export const stationName = {
 "Cst" : "Stockholm",
 "Sdy" : "Smedby",
 "Tre" : "Trekanten",
+"Sdy" : "Smedby",
+"Vfa" : "Vissefjärda",
+"Hmö" : "Holmsjö",
+"Örs" : "Örsjö",
+"Båa" : "Bergåsa",
+"Lo" : "Lessebo",
 };
