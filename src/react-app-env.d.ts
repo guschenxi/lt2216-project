@@ -6,10 +6,11 @@ interface SDSContext {
     recResult: string;
     nluData: any;
     ttsAgenda: string;
-    person: string;
+    from: string;
+    to: string;
     day: string;
-    whole_day: boolen;
     time: string;
+    which: string;
     confirm: boolen;
     text: string;
     intent: Object;
@@ -24,4 +25,5 @@ type SDSEvent =
     | { type: 'ENDSPEECH' }
     | { type: 'LISTEN' }
     | { type: 'MAXSPEECH' }
+    | { type: 'CHECK' }
     | { type: 'SPEAK', value: string };
