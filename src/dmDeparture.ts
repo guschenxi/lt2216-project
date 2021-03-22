@@ -17,7 +17,7 @@ function prs_grammar(input: string, grammar) {
   var result = prs.resultsForRule(gram.$root);
   if (result[0]===undefined){
      result=[{"reserve":"reserve"}]};
-  //console.log(result);
+  console.log(result);
   return result[0];
 };
 
@@ -43,7 +43,8 @@ export const departureMachine: MachineConfig<SDSContext, any, SDSEvent> = (
 	        on: { 
 		        CHECK: [
                     { target: "#main.overall", cond: (context) => context.from === undefined 
-                              && context.to === undefined && context.date === undefined && context.time === undefined},
+                              && context.to === undefined && context.date === undefined 
+                              && context.time === undefined && context.order === undefined },
                     { target: "#main.from", cond: (context) => context.from === undefined },
 		        	{ target: "#main.to", cond: (context) => context.to === undefined },
 		        	{ target: "#main.time", cond: (context) => context.time === undefined },
@@ -228,7 +229,8 @@ export const departureMachine: MachineConfig<SDSContext, any, SDSEvent> = (
                                 id: 'tvrequest',
                                 src: (context) => tvRequest(createText(context.from, context.to, context.time, context.date, context.order)),
                                 onDone: {
-                                  actions: [ assign({ result: (context, event) => event.data.RESPONSE.RESULT[0] })], 
+                                  actions: [ assign({ result: (context, event) => event.data.RESPONSE.RESULT[0] }),
+                                             ], 
                                   target: 'success',
                                 },
                                 onError: {
@@ -244,8 +246,10 @@ export const departureMachine: MachineConfig<SDSContext, any, SDSEvent> = (
                                 cond: (context) => context.result.TrainAnnouncement.length == 0 
                                },
                                {
-                                actions: assign({ output_text: (context) => 
+                                actions: [assign({ output_text: (context) => 
                                          createReport(context.result.TrainAnnouncement[0]) }),
+                                         assign({ temp: (context) => 
+                                         context.result.TrainAnnouncement[0].AdvertisedTrainIdent })],
                                 target: "#main.read_result", 
                                 cond: (context) => context.result.TrainAnnouncement.length !=0 
                                }
@@ -272,6 +276,7 @@ export const departureMachine: MachineConfig<SDSContext, any, SDSEvent> = (
             	        RECOGNISED: [
             	        {target: ".prompt", cond: (context) => ["en gång till", "igen", "again", "repeat", "listen again"].includes(context.recResult.toLowerCase()) },
             	        {target: ".more_info", cond: (context) => ["mer info", "mer information", "more info"].includes(context.recResult.toLowerCase())},
+            	        {target: ".st_message", cond: (context) => ["stations meddelande", "station announcement", "announcement", "meddelande"].includes(context.recResult.toLowerCase())},
             	        {actions: assign((context) => { return { from: undefined, to: undefined, time: undefined, date: undefined, order: undefined, result: undefined, output_text: undefined } }), 
             	         target: "#departureMachine", 
             	         cond: (context) => ["gå tillbaka", "börja om", "go back", "start over" ].includes(context.recResult.toLowerCase())},
@@ -287,7 +292,7 @@ export const departureMachine: MachineConfig<SDSContext, any, SDSEvent> = (
                         },
                         do_next: {
                             entry: send((context) => ({
-                                type: "SPEAK", value: `Listen again? or more infomation? or start over?` 
+                                type: "SPEAK", value: `Listen again? or more train infomation? stations announcement? or start over?` 
                                 })),
                             on : { ENDSPEECH: "ask"}
                         },
@@ -295,7 +300,7 @@ export const departureMachine: MachineConfig<SDSContext, any, SDSEvent> = (
                             entry: send("LISTEN")
                         },
                         nomatch: {
-            	            entry: say("Listen again, or, more info, or, start over."),
+            	            entry: say("Listen again? or more train infomation? stations announcement? or start over?"),
             	            on: { ENDSPEECH: "ask" }
             	        },
             	        more_info: {
@@ -312,7 +317,8 @@ export const departureMachine: MachineConfig<SDSContext, any, SDSEvent> = (
 			                    check: {
 			                        invoke: {
                                         id: 'tvrequest',
-                                        src: (context) => tvRequest(more_info(context.result.TrainAnnouncement[0].AdvertisedTrainIdent, context.time, context.date)),
+                                        //src: (context) => tvRequest(more_info(context.result.TrainAnnouncement[0].AdvertisedTrainIdent, context.time, context.date)),
+                                        src: (context) => tvRequest(more_info(context.temp, context.time, context.date)),
                                         onDone: {
                                           actions: [ assign({ result: (context, event) => event.data.RESPONSE.RESULT[0] })], 
                                           target: 'success',
@@ -334,6 +340,52 @@ export const departureMachine: MachineConfig<SDSContext, any, SDSEvent> = (
                                                  createMoreReport(context.result.TrainAnnouncement) }),
                                         target: "#main.read_result", 
                                         cond: (context) => context.result.TrainAnnouncement.length !=0 
+                                       }
+                                   ], 
+                  
+                                },
+                                failure: {
+                                  entry: say("failed to fetch data from the authority. Try again."),
+                                  on: { ENDSPEECH: "#main" }
+                                },
+		                    }            	        
+            	        },
+            	        st_message: {
+                 	        initial: "prompt",
+               	            states: {
+                	            prompt: { 
+                        	        entry: send((context) => ({
+                                type: "SPEAK",
+                                value: "checking the station's announcement", 
+                                })),
+                                    on : { ENDSPEECH: "check"} 
+			                    },
+			                    check: {
+			                        invoke: {
+                                        id: 'tvrequest',
+                                        //src: (context) => tvRequest(st_message(context.result.TrainAnnouncement[0].LocationSignature)),
+                                        src: (context) => tvRequest(st_message(context.from)),
+                                        onDone: {
+                                          actions: [ assign({ result: (context, event) => event.data.RESPONSE.RESULT[0] })], 
+                                          target: 'success',
+                                        },
+                                        onError: {
+                                          target: 'failure',
+                                          actions: assign({ error: (context, event) => event.data })
+                                        }
+                                    }
+                                },
+                                success: {
+                                   always: [
+                                       {
+                                        target: "#main.read_no_result",  
+                                        cond: (context) => context.result.TrainMessage.length == 0 
+                                       },
+                                       {
+                                        actions: assign({ output_text: (context) => 
+                                                 create_St_message(context.result.TrainMessage, context.from) }),
+                                        target: "#main.read_result", 
+                                        cond: (context) => context.result.TrainMessage.length !=0 
                                        }
                                    ], 
                   
@@ -432,6 +484,23 @@ function more_info(trainNo, time, date) {
 return text;
 }
 
+
+function st_message(LocationSignature) {
+console.log(LocationSignature);
+	var text = `
+<REQUEST>
+    <LOGIN authenticationkey="${openapiconsolekey}"/>
+      <QUERY objecttype="TrainMessage" schemaversion="1.3">
+            <FILTER>
+                  <EQ name="AffectedLocation" value="${LocationSignature}" />
+            </FILTER>
+            <INCLUDE>ExternalDescription</INCLUDE>
+      </QUERY>
+</REQUEST>`
+    console.log(text)
+return text;
+}
+
 function createReport(input) {
     var adTime=input.AdvertisedTimeAtLocation
     var trainNo=input.AdvertisedTrainIdent.slice(0,-4)+" "+input.AdvertisedTrainIdent.slice(-4,-2)+" "+input.AdvertisedTrainIdent.slice(-2)
@@ -471,6 +540,14 @@ function createMoreReport(input) {
     return text
 };
 
+function create_St_message(input, from) {
+    var text=`Announcement from ${stationName[from]} Station. \n`;
+    for (const [key, value] of Object.entries(input)) {
+        text = text + `No.${Number(key)+1}: ${value.ExternalDescription.slice(0,50)} \n`
+    }
+    console.log(text);
+    return text
+};
 
 //Trafikverket API
 const proxyurl = "";

@@ -14,12 +14,13 @@ export const grammar = `
          <item><tag>out.order = "asc";</tag>
             <ruleref uri="#QuestionWord"/><ruleref uri="#verb"/>
             <item repeat = "0-1">första</item><ruleref uri="#trainWord"/>
-            <item repeat="1-4">
+            <item repeat="0-4">
                <one-of>
                   <item><ruleref uri="#time"/> <tag> out.time = rules.time; </tag></item>
                   <item><ruleref uri="#date"/> <tag> out.date = rules.date; </tag></item>
                   <item><ruleref uri="#from"/> <tag> out.from = rules.from; </tag></item>
                   <item><ruleref uri="#to"/> <tag> out.to = rules.to; </tag></item>
+                  <item><ruleref uri="#fromto"/><tag>out.from = rules.fromto.from; out.to = rules.fromto.to; </tag></item>
                </one-of>
             </item>
          </item>
@@ -30,6 +31,7 @@ export const grammar = `
             <item repeat="0-2"><one-of>
                <item><ruleref uri="#from"/> <tag> out.from = rules.from; </tag></item>
                <item><ruleref uri="#to"/> <tag> out.to = rules.to; </tag></item>
+               <item><ruleref uri="#fromto"/><tag>out.from = rules.fromto.from; out.to = rules.fromto.to; </tag></item>
             </one-of></item>
          </item>
          <item>
@@ -40,8 +42,10 @@ export const grammar = `
                <item><ruleref uri="#date"/> <tag> out.date = rules.date; </tag></item>
                <item><ruleref uri="#from"/> <tag> out.from = rules.from; </tag></item>
                <item><ruleref uri="#to"/> <tag> out.to = rules.to; </tag></item>
+               <item><ruleref uri="#fromto"/><tag>out.from = rules.fromto.from; out.to = rules.fromto.to; </tag></item>
             </one-of></item>
          </item>
+         
       </one-of>
    </rule>
 
@@ -77,8 +81,8 @@ export const grammar = `
 
    <rule id="which">
       <one-of>
-         <item> första <tag> out.time = '00:00'; out.order = "asc"; </tag></item>
-         <item> sista <tag> out.time = '00:00'; out.order = "desc"; </tag></item>
+         <item><one-of><item> första </item><item> Första </item></one-of> <tag> out.time = '00:00'; out.order = "asc"; </tag></item>
+         <item><one-of><item> sista </item><item> Sista </item></one-of><tag> out.time = '00:00'; out.order = "desc"; </tag></item>
          <item> det första <tag> out.time = '00:00'; out.order = "asc"; </tag></item>
          <item> det sista <tag> out.time = '00:00'; out.order = "desc"; </tag></item>
          <item> den första <tag> out.time = '00:00'; out.order = "asc"; </tag></item>
@@ -87,7 +91,11 @@ export const grammar = `
          <item> de sista <tag> out.time = '00:00'; out.order = "desc"; </tag></item>
       </one-of>
    </rule>
-
+   <rule id="fromto">
+      <item repeat="0-1">från</item><ruleref uri="#station"/> <tag> out.from = rules.station; </tag>
+      <item repeat="0-1"><one-of><item>till</item><item>mot</item></one-of></item>
+      <ruleref uri="#station"/> <tag> out.to = rules.station; </tag>
+   </rule>
    <rule id="from">
       <item>från</item><ruleref uri="#station"/> <tag> out = rules.station; </tag>
    </rule>
@@ -137,10 +145,10 @@ export const grammar = `
 		 <item><ruleref uri="#hour"/>.<ruleref uri="#minute"/><tag>out = rules.hour+":"+rules.minute;</tag></item>
 		 <item><ruleref uri="#hour"/>och<ruleref uri="#minute"/><tag>out.hour = rules.hour; out.minute = rules.minute;</tag></item>
 		 <item><ruleref uri="#minute"/> över <ruleref uri="#hour"/><tag>out = rules.hour+":"+rules.minute; </tag></item>
-		 <item><ruleref uri="#minute"/> i <ruleref uri="#hour"/><tag>out = (rules.hour - 1)+":"+(60 - rules.minute); </tag></item>
-		 <item> halv <ruleref uri="#hour"/><tag>out = (rules.hour-1) +":30"; </tag></item>
-		 <item> kvart i <ruleref uri="#hour"/><tag>out = (rules.hour-1) +":45"; </tag></item>
-		 <item> kvart över <ruleref uri="#hour"/><tag>out = rules.hour +":15"; </tag></item>
+		 <item><ruleref uri="#minute"/> i <ruleref uri="#hour"/><tag>out = ("0"+(rules.hour - 1)).slice(-2)+":"+("0"+(60 - rules.minute)).slice(-2); </tag></item>
+		 <item> halv <ruleref uri="#hour"/><tag>out = ("0"+(rules.hour-1)).slice(-2) +":30"; </tag></item>
+		 <item> kvart i <ruleref uri="#hour"/><tag>out = ("0"+(rules.hour-1)).slice(-2) +":45"; </tag></item>
+		 <item> kvart över <ruleref uri="#hour"/><tag>out = ("0"+rules.hour).slice(-2) +":15"; </tag></item>
 	  </one-of>
    </rule>
    
