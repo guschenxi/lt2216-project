@@ -14,7 +14,9 @@ interface SDSContext {
     text: string;
     intent: Object;
     count: number;
-    order: string,
+    order: string;
+    output_text: string;
+    temp: string,
 
 }
 

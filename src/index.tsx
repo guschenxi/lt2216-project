@@ -5,7 +5,7 @@ import { Machine, assign, send, State } from "xstate";
 import { useMachine, asEffect } from "@xstate/react";
 import { inspect } from "@xstate/inspect";
 import { departureMachine } from "./dmDeparture";
-
+import { stationName } from './grammars/stationName';
 
 inspect({
     url: "https://statecharts.io/inspect",
@@ -94,7 +94,8 @@ const machine = Machine<SDSContext, any, SDSEvent>({
             logIntent: (context: SDSContext) => {
                 /* context.nluData = event.data */
                 console.log('<< NLU intent: ' + context.nluData.intent.name)
-            }
+            },
+            clear_context: assign((context) => { return { from: undefined, to: undefined, time: undefined, date: undefined, order: undefined, result: undefined, output_text: undefined, temp: undefined } }),
         },
     });
 
@@ -122,7 +123,7 @@ const ReactiveButton = (props: Props): JSX.Element => {
         default:
             return (
                 <button type="button" className="glow-on-hover" {...props}>
-                    Train Info
+                    Start dialog...
                 </button >
             );
     }
@@ -177,8 +178,57 @@ function App() {
 
 
     return (
+
         <div className="App">
-            <ReactiveButton state={current} onClick={() => send('CLICK')} />
+            <h1>Train Info System</h1>
+            <ReactiveButton state={current} onClick={() => send('CLICK')} /><br/>
+            
+            <h3>Form-filled Dialog:</h3>
+
+            <table>
+              <tr>
+                <th>FROM:</th>
+                <th>TO:</th>
+                <th>TIME:</th>
+                <th>DATE:</th>
+                <th>Train No:</th>
+                
+              </tr>
+              <tr>
+                <td>{stationName[current.context.from]} </td>
+                <td>{stationName[current.context.to]}</td>
+                <td>{current.context.time}</td>
+                <td>{current.context.date}</td>
+                <td>{current.context.temp}</td>
+              </tr>
+            </table>
+            <br/>    
+            <table>
+              <tr>
+                <th>TTS: (in English)</th>
+              </tr>
+              <tr>
+                <td>{current.context.ttsAgenda}</td>
+              </tr>
+            </table>
+            <br/>
+              <table>
+              <tr>
+                <th>ASR: (in Swedish)</th>
+              </tr>
+              <tr>
+                <td>{current.context.recResult}</td>
+              </tr>
+            </table>
+            <br/>
+            <table>
+              <tr>
+                <th>Output Text</th>
+              </tr>
+              <tr>
+                <td>{current.context.output_text}</td>
+              </tr>
+            </table>
         </div>
     )
 };

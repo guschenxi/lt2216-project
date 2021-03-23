@@ -17,7 +17,7 @@ function prs_grammar(input: string, grammar) {
   var result = prs.resultsForRule(gram.$root);
   if (result[0]===undefined){
      result=[{"reserve":"reserve"}]};
-  console.log(result);
+  //console.log(result);
   return result[0];
 };
 
@@ -82,13 +82,13 @@ export const departureMachine: MachineConfig<SDSContext, any, SDSEvent> = (
 	            startover: {
                     entry: send((_context: SDSContext) => ({ type: "SPEAK", value: "OK. Starting over" })),
                     on: { ENDSPEECH: "#departureMachine" },
-                    exit: [assign((context) => { return { from: undefined, to: undefined, time: undefined, date: undefined, order: undefined, result: undefined, output_text: undefined, recResult: undefined } }), cancel("ENDSPEECH")]
+                    exit: ['clear_context', cancel("ENDSPEECH")]
                 },
 
                 stop: {
                     entry: say("OK. Going back to the root menu."),
                     on: { ENDSPEECH: '#root'},
-                    exit: assign((context) => { return { from: undefined, to: undefined, time: undefined, date: undefined, order: undefined, result: undefined, output_text: undefined, recResult: undefined } }),
+                    exit: 'clear_context',
                 },
                 
             	welcome: {
@@ -202,12 +202,7 @@ export const departureMachine: MachineConfig<SDSContext, any, SDSEvent> = (
             	        choose: {
             	              always:  [
             	                     {target: '#main.final', cond: (context) => context.confirm === true },
-                    	             {actions: [
-                                          assign((context) => { return { from: undefined } }),
-                                          assign((context) => { return { to: undefined } }),
-                                          assign((context) => { return { order: undefined } }),
-                                          assign((context) => { return { time: undefined } }),
-                                          assign((context) => { return { date: undefined } })],
+                    	             {actions: 'clear_context',
                                       target: '#main.welcome', cond: (context) => context.confirm === false }
                     	            ] 
                     	},
@@ -259,7 +254,7 @@ export const departureMachine: MachineConfig<SDSContext, any, SDSEvent> = (
                         failure: {
                           entry: say("failed to fetch data from the authority. Try again."),
                           on: { ENDSPEECH: "#main" },
-                          exit: assign((context) => { return { from: undefined, to: undefined, time: undefined, date: undefined, order: undefined, result: undefined, output_text: undefined } }),
+                          exit: 'clear_context',
                         },
 		            }
             	},
@@ -267,7 +262,7 @@ export const departureMachine: MachineConfig<SDSContext, any, SDSEvent> = (
     	        read_no_result: {
                     entry: [say("Sorry, No related info has been found. Try again.")],
                     on : { ENDSPEECH: "#main"}, 
-                    exit: assign((context) => { return { from: undefined, to: undefined, time: undefined, date: undefined, order: undefined, result: undefined, output_text: undefined } }),
+                    exit: 'clear_context',
                 },
 
                 read_result: {
@@ -277,7 +272,7 @@ export const departureMachine: MachineConfig<SDSContext, any, SDSEvent> = (
             	        {target: ".prompt", cond: (context) => ["en gång till", "igen", "again", "repeat", "listen again"].includes(context.recResult.toLowerCase()) },
             	        {target: ".more_info", cond: (context) => ["mer info", "mer information", "more info"].includes(context.recResult.toLowerCase())},
             	        {target: ".st_message", cond: (context) => ["stations meddelande", "station announcement", "announcement", "meddelande"].includes(context.recResult.toLowerCase())},
-            	        {actions: assign((context) => { return { from: undefined, to: undefined, time: undefined, date: undefined, order: undefined, result: undefined, output_text: undefined } }), 
+            	        {actions: "clear_context", 
             	         target: "#departureMachine", 
             	         cond: (context) => ["gå tillbaka", "börja om", "go back", "start over" ].includes(context.recResult.toLowerCase())},
             	        { target: ".nomatch"}
@@ -309,7 +304,7 @@ export const departureMachine: MachineConfig<SDSContext, any, SDSEvent> = (
                 	            prompt: { 
                         	        entry: send((context) => ({
                                 type: "SPEAK",
-                                value: "checking", 
+                                value: "checking train details", 
                                 //value: `checking more info about train ${context.result.TrainAnnouncement[0].AdvertisedTrainIdent}` 
                                 })),
                                     on : { ENDSPEECH: "check"} 
@@ -346,7 +341,8 @@ export const departureMachine: MachineConfig<SDSContext, any, SDSEvent> = (
                                 },
                                 failure: {
                                   entry: say("failed to fetch data from the authority. Try again."),
-                                  on: { ENDSPEECH: "#main" }
+                                  on: { ENDSPEECH: "#main" },
+                                  exit: 'clear_context',
                                 },
 		                    }            	        
             	        },
@@ -392,7 +388,8 @@ export const departureMachine: MachineConfig<SDSContext, any, SDSEvent> = (
                                 },
                                 failure: {
                                   entry: say("failed to fetch data from the authority. Try again."),
-                                  on: { ENDSPEECH: "#main" }
+                                  on: { ENDSPEECH: "#main" },
+                                  exit: 'clear_context',
                                 },
 		                    }            	        
             	        },
@@ -401,8 +398,7 @@ export const departureMachine: MachineConfig<SDSContext, any, SDSEvent> = (
 	        },
         },
     },
-}
-)
+})
 
 function createText(from, to, time, date, order) {
     var currentdate = new Date()
@@ -534,7 +530,7 @@ function createMoreReport(input) {
       stations = stations + ", " + stationName[value.LocationSignature]
     };
     var text=`
-    The train ${trainNo}, will departure from ${stationName[begin]} at ${begintime}. calling at ${stations},
+    The train ${trainNo}, will departure from ${stationName[begin]} at ${begintime}. Calling at${stations},
     and finally arrive at ${stationName[final]} at ${finaltime}.
     `
     return text
