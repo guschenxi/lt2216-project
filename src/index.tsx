@@ -183,7 +183,7 @@ function App() {
             <h1>Train Info System</h1>
             <ReactiveButton state={current} onClick={() => send('CLICK')} /><br/>
             
-            <h3>Form-filled Dialog:</h3>
+            <h3>Frame-Based Dialog:</h3>
 
             <table>
               <tr>

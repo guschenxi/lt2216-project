@@ -96,7 +96,7 @@ export const departureMachine: MachineConfig<SDSContext, any, SDSEvent> = (
                         
      	            on: { ENDSPEECH: "overall" },
             	    states: {
-            	        prompt: { entry: say("Hello!") }
+            	        prompt: { entry: say("Welcome!") }
             	    }
             	},
             	overall: {
@@ -261,7 +261,7 @@ export const departureMachine: MachineConfig<SDSContext, any, SDSEvent> = (
 
     	        read_no_result: {
                     entry: [say("Sorry, No related info has been found. Try again.")],
-                    on : { ENDSPEECH: "#main"}, 
+                    on : { ENDSPEECH: "#main.overall"}, 
                     exit: 'clear_context',
                 },
 
@@ -273,7 +273,7 @@ export const departureMachine: MachineConfig<SDSContext, any, SDSEvent> = (
             	        {target: ".more_info", cond: (context) => ["mer info", "mer information", "more info"].includes(context.recResult.toLowerCase())},
             	        {target: ".st_message", cond: (context) => ["stations meddelande", "station announcement", "announcement", "meddelande"].includes(context.recResult.toLowerCase())},
             	        {actions: "clear_context", 
-            	         target: "#departureMachine", 
+            	         target: "#main.overall", 
             	         cond: (context) => ["gå tillbaka", "börja om", "go back", "start over" ].includes(context.recResult.toLowerCase())},
             	        { target: ".nomatch"}
             	        ]
@@ -287,7 +287,7 @@ export const departureMachine: MachineConfig<SDSContext, any, SDSEvent> = (
                         },
                         do_next: {
                             entry: send((context) => ({
-                                type: "SPEAK", value: `Listen again? or more train infomation? stations announcement? or start over?` 
+                                type: "SPEAK", value: `listen to more train infomation? or station's announcement?` 
                                 })),
                             on : { ENDSPEECH: "ask"}
                         },
